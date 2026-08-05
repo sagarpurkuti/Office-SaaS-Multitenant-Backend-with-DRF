@@ -1,13 +1,12 @@
 # makemigrations and migrate
 python manage.py makemigrations tenants
 python manage.py makemigrations common
-python manage.py migrate_schemas --shared
-
-
-
-
 python manage.py makemigrations accounts
+python manage.py makemigrations organization
+
 python manage.py migrate_schemas --shared
+python manage.py migrate_schemas
+
 
 # Create a superuser in public schema
 python manage.py create_tenant_superuser --email admin@example.com --password admin --first_name admin --last_name admin

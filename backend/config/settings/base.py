@@ -41,7 +41,8 @@ CORS_ALLOW_ALL_ORIGINS = True  # only for dev
 
 # Tenant apps (each tenant gets its own schema)
 TENANT_APPS = [
-    'apps.common',                    # shared utilities (can be tenant-specific)
+    'apps.common',  
+    'apps.organizations'                  # shared utilities (can be tenant-specific)
     # future apps: hr, cooperative, etc.
 ]
 
