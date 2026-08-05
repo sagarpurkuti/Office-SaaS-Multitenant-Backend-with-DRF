@@ -46,6 +46,8 @@ TENANT_APPS = [
     'apps.organizations',               # shared utilities (can be tenant-specific)
     'apps.employees',
     'apps.members',
+    'apps.attendance',
+    'apps.leave',
     # future apps: hr, cooperative, etc.
 ]
 
