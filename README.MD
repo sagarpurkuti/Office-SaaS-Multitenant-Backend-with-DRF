@@ -3,7 +3,7 @@ python manage.py makemigrations tenants
 python manage.py makemigrations common
 python manage.py makemigrations accounts
 python manage.py makemigrations organization
-
+python manage.py makemigrations employees members
 python manage.py migrate_schemas --shared
 python manage.py migrate_schemas
 
