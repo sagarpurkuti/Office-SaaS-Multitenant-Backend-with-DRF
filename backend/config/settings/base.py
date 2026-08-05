@@ -35,6 +35,7 @@ SHARED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  # only for dev
@@ -131,9 +132,34 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Office SaaS API',
+    'DESCRIPTION': (
+        'REST API for tenant-scoped authentication and organization management. '
+        'Send access tokens as `Authorization: Bearer <token>`. API requests must '
+        'use the tenant domain so django-tenants selects the correct schema.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api',
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'JWT sessions and account security.'},
+        {'name': 'Organizations', 'description': 'Organization profile management.'},
+        {'name': 'Branches', 'description': 'Organization branch management.'},
+        {'name': 'Departments', 'description': 'Department management.'},
+        {'name': 'Designations', 'description': 'Job designation management.'},
+        {'name': 'Fiscal years', 'description': 'Fiscal year management.'},
+        {'name': 'Holidays', 'description': 'Organization and branch holiday management.'},
+        {'name': 'Company settings', 'description': 'Tenant company preferences.'},
+    ],
 }
 
 from datetime import timedelta

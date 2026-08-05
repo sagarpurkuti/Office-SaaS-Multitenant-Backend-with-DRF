@@ -41,6 +41,18 @@ class TokenResponseSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     user = UserSerializer()
 
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(
+        write_only=True,
+        help_text='Refresh token to revoke.',
+    )
+
+class DetailSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+class ErrorSerializer(serializers.Serializer):
+    error = serializers.CharField()
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, validators=[validate_password])
