@@ -6,6 +6,8 @@ python manage.py makemigrations organization
 python manage.py makemigrations employees members
 python manage.py makemigrations attendance leave
 python manage.py makemigrations payroll
+python manage.py makemigrations saas_manager
+
 
 
 python manage.py migrate_schemas --shared

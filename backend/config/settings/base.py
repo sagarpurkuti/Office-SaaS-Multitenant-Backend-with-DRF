@@ -36,6 +36,7 @@ SHARED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
+    'apps.saas_manager',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  # only for dev
@@ -69,6 +70,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+PUBLIC_SCHEMA_URLCONF = 'config.urls_public'
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
 
 TEMPLATES = [
     {
@@ -146,25 +149,14 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Office SaaS API',
     'DESCRIPTION': (
-        'REST API for tenant-scoped authentication and organization management. '
-        'Send access tokens as `Authorization: Bearer <token>`. API requests must '
-        'use the tenant domain so django-tenants selects the correct schema.'
+        'Default OpenAPI metadata. Host-specific docs use custom_settings in '
+        '`config.urls` (tenant) and `config.urls_public` (platform).'
     ),
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': r'/api',
-    'TAGS': [
-        {'name': 'Authentication', 'description': 'JWT sessions and account security.'},
-        {'name': 'Organizations', 'description': 'Organization profile management.'},
-        {'name': 'Branches', 'description': 'Organization branch management.'},
-        {'name': 'Departments', 'description': 'Department management.'},
-        {'name': 'Designations', 'description': 'Job designation management.'},
-        {'name': 'Fiscal years', 'description': 'Fiscal year management.'},
-        {'name': 'Holidays', 'description': 'Organization and branch holiday management.'},
-        {'name': 'Company settings', 'description': 'Tenant company preferences.'},
-    ],
 }
 
 from datetime import timedelta
@@ -176,3 +168,6 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+
+PLATFORM_NAME = "Saas HRM"

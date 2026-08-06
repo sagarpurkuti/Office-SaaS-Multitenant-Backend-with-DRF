@@ -5,6 +5,9 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.utils import timezone
 from apps.tenants.models import Client  # our Tenant model
 
+
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -71,3 +74,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def is_manager(self):
         return self.role == self.Role.MANAGER
+
+
+class Role(models.TextChoices):
+    SUPER_ADMIN = 'SUPER_ADMIN', 'Super Admin'
+    OWNER = 'OWNER', 'Owner'
+    HR = 'HR', 'HR'
+    MANAGER = 'MANAGER', 'Manager'
+    ACCOUNTANT = 'ACCOUNTANT', 'Accountant'
+    EMPLOYEE = 'EMPLOYEE', 'Employee'
+    SUPPORT = 'SUPPORT', 'Support'   # <-- add this
