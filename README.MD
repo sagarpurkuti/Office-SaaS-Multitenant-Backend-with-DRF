@@ -5,6 +5,8 @@ python manage.py makemigrations accounts
 python manage.py makemigrations organization
 python manage.py makemigrations employees members
 python manage.py makemigrations attendance leave
+python manage.py makemigrations payroll
+
 
 python manage.py migrate_schemas --shared
 python manage.py migrate_schemas

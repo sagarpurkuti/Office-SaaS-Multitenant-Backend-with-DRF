@@ -48,6 +48,7 @@ TENANT_APPS = [
     'apps.members',
     'apps.attendance',
     'apps.leave',
+    'apps.payroll',
     # future apps: hr, cooperative, etc.
 ]
 
