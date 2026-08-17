@@ -2,10 +2,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django_tenants.utils import tenant_context
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, extend_schema_view
 from apps.accounts.models import User
 from apps.tenants.models import Client
@@ -15,6 +13,7 @@ from .serializers import (
     TenantSubscriptionSerializer,
     TenantSerializer,
     TenantCreateSerializer,
+    TenantProvisionedSerializer,
     AuditEventSerializer,
     SystemAnnouncementSerializer,
     PlatformErrorSerializer,
@@ -195,18 +194,33 @@ class TenantSubscriptionViewSet(viewsets.ModelViewSet):
     ),
     create=extend_schema(
         tags=['Tenants'],
-        summary='Create tenant (CRUD)',
+        summary='Provision a tenant',
         description=(
-            'Standard ModelViewSet create against the Client model. '
-            'Prefer `POST /api/platform/tenants/create_tenant/` for full provisioning.'
+            'Fully provision a tenant from Swagger or the API: create Client + primary Domain, '
+            'PostgreSQL schema, trial subscription, seeded organization data, and a tenant owner user.\n\n'
+            '**Prerequisites:** create an active plan via `POST /api/platform/plans/` and use its `id` as `plan_id`.\n\n'
+            '**Auth:** Authorize with a platform `SUPER_ADMIN` Bearer token from `/api/auth/login/`.'
         ),
-        request=TenantSerializer,
+        request=TenantCreateSerializer,
         responses={
-            201: TenantSerializer,
-            400: OpenApiResponse(description='Validation failed.'),
+            201: TenantProvisionedSerializer,
+            400: PlatformErrorSerializer,
             **_auth_errors('platform administrators or support operators'),
         },
-        deprecated=True,
+        examples=[
+            OpenApiExample(
+                'Provision demo tenant (Render)',
+                value={
+                    'name': 'Demo Cooperative',
+                    'schema_name': 'demo1',
+                    'domain': 'office-saas-api.onrender.com',
+                    'plan_id': 1,
+                    'company_email': 'owner@demo1.example',
+                    'company_phone': '+9779800000000',
+                },
+                request_only=True,
+            )
+        ],
     ),
     update=extend_schema(
         tags=['Tenants'],
@@ -254,43 +268,13 @@ class TenantViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return super().get_queryset()
 
-    @extend_schema(
-        tags=['Tenants'],
-        summary='Provision a tenant',
-        description=(
-            'Fully provision a tenant: create the Client and primary Domain, create the '
-            'PostgreSQL schema, attach a trial/active subscription, seed default organization '
-            'records, and create the tenant support user.'
-        ),
-        request=TenantCreateSerializer,
-        responses={
-            201: TenantSerializer,
-            400: PlatformErrorSerializer,
-            **_auth_errors('platform administrators or support operators'),
-        },
-        examples=[
-            OpenApiExample(
-                'Provision demo tenant',
-                value={
-                    'name': 'Demo Cooperative',
-                    'schema_name': 'demo',
-                    'domain': 'demo.localhost',
-                    'plan_id': 1,
-                    'company_email': 'ops@demo.example',
-                    'company_phone': '+9779800000000',
-                },
-                request_only=True,
-            )
-        ],
-    )
-    @action(detail=False, methods=['post'])
-    def create_tenant(self, request):
-        serializer = TenantCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+    def get_serializer_class(self):
+        if self.action in ('create', 'create_tenant'):
+            return TenantCreateSerializer
+        return TenantSerializer
 
+    def _provision_tenant(self, data, created_by):
         plan = get_object_or_404(TenantPlan, id=data['plan_id'])
-
         tenant_data = {
             'name': data['name'],
             'schema_name': data['schema_name'],
@@ -301,16 +285,64 @@ class TenantViewSet(viewsets.ModelViewSet):
             'domain': data['domain'],
             'is_primary': True,
         }
+        # Do not wrap migrate_schemas in transaction.atomic() — DDL cannot nest reliably.
+        tenant, support_email, support_password = TenantProvisioningService.create_tenant(
+            tenant_data=tenant_data,
+            domain_data=domain_data,
+            plan=plan,
+            created_by=created_by,
+            company_email=data.get('company_email') or '',
+            company_phone=data.get('company_phone') or '',
+        )
+        payload = TenantSerializer(tenant).data
+        payload['support_email'] = support_email
+        payload['support_password'] = support_password
+        return payload
 
+    def create(self, request, *args, **kwargs):
+        """POST /api/platform/tenants/ — full provisioning (Swagger Create)."""
+        serializer = TenantCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
-            with transaction.atomic():
-                tenant = TenantProvisioningService.create_tenant(
-                    tenant_data=tenant_data,
-                    domain_data=domain_data,
-                    plan=plan,
-                    created_by=request.user,
-                )
-                return Response(TenantSerializer(tenant).data, status=status.HTTP_201_CREATED)
+            payload = self._provision_tenant(serializer.validated_data, request.user)
+            return Response(payload, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        tags=['Tenants'],
+        summary='Provision a tenant (alias)',
+        description=(
+            'Same as `POST /api/platform/tenants/`. Kept for older clients and bookmarks.'
+        ),
+        request=TenantCreateSerializer,
+        responses={
+            201: TenantProvisionedSerializer,
+            400: PlatformErrorSerializer,
+            **_auth_errors('platform administrators or support operators'),
+        },
+        examples=[
+            OpenApiExample(
+                'Provision demo tenant',
+                value={
+                    'name': 'Demo Cooperative',
+                    'schema_name': 'demo1',
+                    'domain': 'office-saas-api.onrender.com',
+                    'plan_id': 1,
+                    'company_email': 'owner@demo1.example',
+                    'company_phone': '+9779800000000',
+                },
+                request_only=True,
+            )
+        ],
+    )
+    @action(detail=False, methods=['post'], url_path='create_tenant')
+    def create_tenant(self, request):
+        serializer = TenantCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payload = self._provision_tenant(serializer.validated_data, request.user)
+            return Response(payload, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -370,9 +402,8 @@ class TenantViewSet(viewsets.ModelViewSet):
         tags=['Tenants'],
         summary='Reset tenant support password',
         description=(
-            'Generate a strong temporary password for the tenant support user '
-            '(`support@example.com` inside the tenant schema). In production this password '
-            'should be delivered by email instead of returned in the API response.'
+            'Generate a strong temporary password for the tenant owner user linked to this tenant. '
+            'In production deliver by email instead of returning in the API response.'
         ),
         request=None,
         responses={
@@ -385,14 +416,13 @@ class TenantViewSet(viewsets.ModelViewSet):
     def reset_password(self, request, pk=None):
         tenant = self.get_object()
         new_password = PasswordService.generate_strong_password()
-        with tenant_context(tenant):
-            user = User.objects.filter(email='support@example.com').first()
-            if not user:
-                return Response({'error': 'Support user not found'}, status=status.HTTP_404_NOT_FOUND)
-            user.set_password(new_password)
-            user.save()
+        user = User.objects.filter(tenant=tenant).order_by('created_at').first()
+        if not user:
+            return Response({'error': 'Tenant user not found'}, status=status.HTTP_404_NOT_FOUND)
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
         AuditService.log_action(request.user, AuditEvent.Action.RESET_PASSWORD, target=tenant.name)
-        return Response({'new_password': new_password})
+        return Response({'new_password': new_password, 'email': user.email})
 
 
 @extend_schema_view(

@@ -1,6 +1,9 @@
+from datetime import time
+
 from django.core.management import call_command
 from django.utils import timezone
 from django_tenants.utils import tenant_context
+
 from apps.tenants.models import Client, Domain
 from apps.accounts.models import User
 from apps.organizations.models import Organization, Branch, Department, CompanySetting
@@ -11,16 +14,16 @@ from .password_service import PasswordService
 from .audit_service import AuditService
 from .email_service import EmailService
 
+
 class TenantProvisioningService:
     @staticmethod
-    def create_tenant(tenant_data, domain_data, plan, created_by):
+    def create_tenant(tenant_data, domain_data, plan, created_by, company_email='', company_phone=''):
         """
-        tenant_data: dict with name, schema_name, etc. (for Client)
-        domain_data: dict with domain, is_primary (for Domain)
-        plan: TenantPlan instance
-        created_by: User instance (platform admin)
+        Provision Client + Domain + subscription + schema seed + support user.
+
+        Returns (client, support_email, support_password).
         """
-        # 1. Create Tenant (Client)
+        # 1. Create Tenant (Client) — auto_create_schema creates the PG schema
         client = Client.objects.create(
             name=tenant_data['name'],
             schema_name=tenant_data['schema_name'],
@@ -32,65 +35,65 @@ class TenantProvisioningService:
         domain = Domain.objects.create(
             domain=domain_data['domain'],
             tenant=client,
-            is_primary=domain_data.get('is_primary', True)
+            is_primary=domain_data.get('is_primary', True),
         )
 
         # 3. Create subscription
-        subscription = TenantSubscription.objects.create(
+        TenantSubscription.objects.create(
             tenant=client,
             plan=plan,
             start_date=tenant_data.get('start_date', timezone.now().date()),
             status=TenantSubscription.Status.TRIAL,
         )
 
-        # 4. Run tenant migrations (create schema and apply all tenant apps)
-        # We'll use the management command
-        call_command('migrate_schemas', schema_name=client.schema_name)
+        # 4. Ensure tenant apps are migrated (safe if auto_create_schema already synced)
+        call_command('migrate_schemas', schema_name=client.schema_name, verbosity=0)
 
         # 5. Seed default data for the tenant
-        TenantProvisioningService._seed_tenant_data(client, created_by)
+        TenantProvisioningService._seed_tenant_data(
+            client,
+            company_email=company_email or '',
+            company_phone=company_phone or '',
+        )
 
-        # 6. Create super admin user (support)
-        username = 'support'
-        password = PasswordService.generate_strong_password()
-        with tenant_context(client):
-            user = User.objects.create_superuser(
-                email='support@example.com',  # placeholder, will be updated later
-                password=password,
-                first_name='Support',
-                last_name='Admin',
-                tenant=client,
-            )
-            # Assign role: OWNER
-            user.role = User.Role.OWNER
-            user.save()
+        # 6. Support/owner user lives in the public (shared) schema
+        support_email = company_email or f"support@{client.schema_name}.local"
+        support_password = PasswordService.generate_strong_password()
+        if User.objects.filter(email__iexact=support_email).exists():
+            support_email = f"support+{client.schema_name}@example.com"
 
-        # 7. Send welcome email
-        # We'll need the email address; we can store it in tenant data or use a default.
-        # We'll send to a default email for now.
-        EmailService.send_welcome_email(client, domain, username, password)
+        user = User.objects.create_user(
+            email=support_email,
+            password=support_password,
+            first_name='Support',
+            last_name='Admin',
+            role=User.Role.OWNER,
+            tenant=client,
+            is_staff=True,
+            is_active=True,
+        )
+
+        # 7. Welcome email (console stub when SMTP unset)
+        EmailService.send_welcome_email(client, domain, support_email, support_password)
 
         # 8. Audit log
         AuditService.log_action(created_by, AuditEvent.Action.CREATE_TENANT, target=client.name)
 
-        return client
+        return client, support_email, support_password
 
     @staticmethod
-    def _seed_tenant_data(tenant, created_by):
-        """Seed default roles, departments, leave types, shifts, etc."""
+    def _seed_tenant_data(tenant, company_email='', company_phone=''):
+        """Seed default org structure inside the tenant schema."""
         with tenant_context(tenant):
-            # 1. Organization (will be created later; we assume we have an Organization model)
-            # For now, we'll create a default organization using the tenant name
             org = Organization.objects.create(
                 name=tenant.name,
-                short_name=tenant.name[:10],
-                phone='',
-                email='',
+                short_name=(tenant.schema_name[:50] or tenant.name[:50]),
+                phone=company_phone or '0000000000',
+                email=company_email or None,
                 timezone='Asia/Kathmandu',
                 currency='NPR',
             )
 
-            # 2. Branches - default head office
             branch = Branch.objects.create(
                 organization=org,
                 name='Head Office',
@@ -99,18 +102,21 @@ class TenantProvisioningService:
                 is_active=True,
             )
 
-            # 3. Departments
-            dept_names = ['Human Resources', 'Finance', 'IT', 'Administration', 'Operations']
-            for idx, name in enumerate(dept_names):
+            departments = [
+                ('Human Resources', 'HR'),
+                ('Finance', 'FIN'),
+                ('IT', 'IT'),
+                ('Administration', 'ADM'),
+                ('Operations', 'OPS'),
+            ]
+            for name, code in departments:
                 Department.objects.create(
                     organization=org,
                     name=name,
-                    code=name[:3].upper(),
+                    code=code,
                     is_active=True,
                 )
 
-            # 4. Designations (optional)
-            # 5. Leave Types
             leave_types = [
                 {'name': 'Annual Leave', 'days_per_year': 15, 'requires_approval': True},
                 {'name': 'Casual Leave', 'days_per_year': 5, 'requires_approval': True},
@@ -120,28 +126,22 @@ class TenantProvisioningService:
             for lt in leave_types:
                 LeaveType.objects.create(organization=org, **lt)
 
-            # 6. Shift
-            shift = Shift.objects.create(
+            Shift.objects.create(
                 organization=org,
                 name='Default Shift',
-                start_time='09:00:00',
-                end_time='17:00:00',
+                start_time=time(9, 0),
+                end_time=time(17, 0),
                 grace_minutes=10,
                 minimum_work_hours=8,
             )
 
-            # 7. Weekend policy (Saturday off)
             WeekendPolicy.objects.create(
                 organization=org,
                 branch=branch,
-                weekday=5,  # Saturday
+                weekday=WeekendPolicy.Weekday.SATURDAY,
                 is_weekend=True,
             )
 
-            # 8. Fiscal Year (default current)
-            # We'll skip for simplicity; can be added later.
-
-            # 9. Company Settings
             CompanySetting.objects.create(
                 organization=org,
                 timezone='Asia/Kathmandu',
@@ -150,7 +150,3 @@ class TenantProvisioningService:
                 attendance_method='manual',
                 default_leave_days=0,
             )
-
-            # 10. Create default roles? Already handled by User model roles.
-
-            # 11. Create default permissions? Not needed yet.

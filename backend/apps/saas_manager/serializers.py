@@ -94,34 +94,67 @@ class TenantCreateSerializer(serializers.Serializer):
     )
     schema_name = serializers.CharField(
         max_length=63,
-        help_text='PostgreSQL schema name. Must be unique and DNS-safe.',
+        help_text='PostgreSQL schema name. Must be unique and DNS-safe (lowercase, no spaces).',
     )
     domain = serializers.CharField(
         max_length=100,
-        help_text='Primary hostname for the tenant, for example acme.localhost.',
+        help_text=(
+            'Primary hostname for the tenant. On Render free without custom DNS, '
+            'you can only route one tenant on the service host '
+            '(e.g. office-saas-api.onrender.com). Prefer demo1.yourdomain.com when using custom domains.'
+        ),
     )
     plan_id = serializers.IntegerField(
-        help_text='Plan primary key to attach as the initial subscription.',
+        help_text='Plan primary key to attach as the initial subscription. Create a plan first via POST /api/platform/plans/.',
     )
     company_email = serializers.EmailField(
         required=False,
-        help_text='Optional company contact email used during provisioning.',
+        help_text='Optional company contact email (also used as the tenant owner login when provided).',
     )
     company_phone = serializers.CharField(
         max_length=20,
         required=False,
+        allow_blank=True,
         help_text='Optional company phone used during provisioning.',
     )
 
     def validate_schema_name(self, value):
+        value = value.strip().lower()
+        if not value.replace('_', '').isalnum():
+            raise serializers.ValidationError(
+                'Schema name must be alphanumeric (underscores allowed).'
+            )
         if Client.objects.filter(schema_name=value).exists():
             raise serializers.ValidationError('Schema name already exists.')
         return value
 
     def validate_domain(self, value):
+        value = value.strip().lower()
         if Domain.objects.filter(domain=value).exists():
             raise serializers.ValidationError('Domain already exists.')
         return value
+
+    def validate_plan_id(self, value):
+        if not TenantPlan.objects.filter(id=value, is_active=True).exists():
+            raise serializers.ValidationError('Active plan with this id was not found.')
+        return value
+
+
+class TenantProvisionedSerializer(TenantSerializer):
+    """Tenant payload returned after full provisioning (includes bootstrap credentials)."""
+
+    support_email = serializers.EmailField(
+        help_text='Tenant owner/support login email created during provisioning.',
+    )
+    support_password = serializers.CharField(
+        help_text='Temporary password for the support user. Store securely; shown only once.',
+    )
+
+    class Meta(TenantSerializer.Meta):
+        fields = list(TenantSerializer.Meta.fields) + [
+            'support_email',
+            'support_password',
+        ]
 
 
 class AuditEventSerializer(serializers.ModelSerializer):
