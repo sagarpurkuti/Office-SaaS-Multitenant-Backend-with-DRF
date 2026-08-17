@@ -8,7 +8,10 @@ Multi-tenant HR / cooperative **API** built with Django, DRF, JWT, and **django-
 |-----|----------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture, tenancy, flows, API map, diagrams |
 | [docs/RENDER_DEPLOY.md](docs/RENDER_DEPLOY.md) | Render **free plan** test deploy + 1–2 tenants |
+| [backend/README.md](backend/README.md) | Backend layout + links to each app README |
 | [render.yaml](render.yaml) | Render Blueprint (Python web + Postgres, no Docker) |
+
+**App READMEs:** `backend/apps/*/README.md` and `backend/config/README.md` — short per-component notes for contributors.
 
 **Deploy:** push to GitHub → Render **Blueprint** (or manual web service with Root Directory `backend`, build `./build.sh`, start `./start.sh`).
 

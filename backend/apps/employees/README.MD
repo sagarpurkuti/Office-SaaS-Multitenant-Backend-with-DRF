@@ -1,8 +1,28 @@
-# Test API
-Create Employee
-POST /api/employees/
-Body (minimal):
+# employees
 
+Employee master data and nested profile/documents for a tenant.
+
+## Schema
+
+**Tenant** (`TENANT_APPS`)
+
+## Main models
+
+Employee · EmployeeProfile · Address · Education · Experience · Document · EmergencyContact
+
+## API (`/api/` — tenant host)
+
+| Prefix | Resource |
+|--------|----------|
+| `employees/` | CRUD + nested profile payloads |
+
+## Example create
+
+```http
+POST /api/employees/
+```
+
+```json
 {
   "employee_id": "EMP001",
   "organization": 1,
@@ -14,21 +34,8 @@ Body (minimal):
     "dob": "1990-01-01"
   }
 }
+```
 
+## Notes
 
-Get Employees
-GET /api/employees/
-
-Create Member
-POST /api/members/
-Body:
-{
-  "member_no": "M001",
-  "organization": 1,
-  "joined_date": "2025-01-01",
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "gender": "FEMALE",
-  "dob": "1992-05-10",
-  "phone": "9876543210"
-}
+Requires tenant host + JWT for a user belonging to that tenant. Explore full schema in Swagger on a tenant domain.
