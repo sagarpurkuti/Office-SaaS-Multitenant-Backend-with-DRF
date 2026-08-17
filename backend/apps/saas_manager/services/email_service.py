@@ -1,6 +1,7 @@
+from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.conf import settings
+
 
 class EmailService:
     @staticmethod
@@ -13,11 +14,30 @@ class EmailService:
             'password': password,
             'platform_name': settings.PLATFORM_NAME,
         }
-        message = render_to_string('saas_manager/emails/welcome.txt', context)
-        html_message = render_to_string('saas_manager/emails/welcome.html', context)
-        # We'll send to the support user's email, but we need to get the user's email.
-        # For now, we'll send to a placeholder or use tenant email from organization.
-        # We'll implement later.
-        # For now, we'll print to console.
-        print(f"Welcome email sent to support@example.com with password {password}")
-        # In production, use send_mail
+        try:
+            message = render_to_string('saas_manager/emails/welcome.txt', context)
+            html_message = render_to_string('saas_manager/emails/welcome.html', context)
+        except Exception:
+            message = (
+                f"Welcome to {settings.PLATFORM_NAME}.\n"
+                f"Organization: {tenant.name}\n"
+                f"Domain: {domain.domain}\n"
+                f"Username: {username}\n"
+                f"Password: {password}\n"
+            )
+            html_message = None
+
+        recipient = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'support@example.com'
+        # Prefer console/log until SMTP is configured
+        if not getattr(settings, 'EMAIL_HOST', None):
+            print(f"[EmailService] Welcome email (no SMTP): to={recipient}\n{message}")
+            return
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[recipient],
+            html_message=html_message,
+            fail_silently=True,
+        )

@@ -1,11 +1,12 @@
-from django.db import transaction, connection
 from django.core.management import call_command
+from django.utils import timezone
 from django_tenants.utils import tenant_context
 from apps.tenants.models import Client, Domain
 from apps.accounts.models import User
-from apps.organizations.models import Organization, Branch, Department, Designation, FiscalYear, CompanySetting
+from apps.organizations.models import Organization, Branch, Department, CompanySetting
 from apps.leave.models import LeaveType
 from apps.attendance.models import Shift, WeekendPolicy
+from ..models import AuditEvent, TenantSubscription
 from .password_service import PasswordService
 from .audit_service import AuditService
 from .email_service import EmailService
@@ -35,7 +36,6 @@ class TenantProvisioningService:
         )
 
         # 3. Create subscription
-        from ..models import TenantSubscription
         subscription = TenantSubscription.objects.create(
             tenant=client,
             plan=plan,

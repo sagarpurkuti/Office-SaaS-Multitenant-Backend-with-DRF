@@ -32,6 +32,6 @@ docker-compose.override.yml
 htmlcov/
 .pytest_cache/
 
-# Ignore migration files
-**/migrations/*
-!**/migrations/__init__.py
+# Keep Django migrations in git (required for Render / CI deploys)
+# Ignore only compiled bytecode under migrations if any
+**/migrations/__pycache__/
