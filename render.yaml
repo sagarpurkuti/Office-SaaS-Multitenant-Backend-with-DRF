@@ -1,0 +1,48 @@
+# Render Blueprint — native Python web service + Postgres (no Docker)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After first deploy: set ALLOWED_HOSTS (and optional custom domains) in the dashboard,
+# then create a platform admin + tenants (see docs/RENDER_DEPLOY.md).
+
+databases:
+  - name: office-saas-db
+    plan: free
+    databaseName: office_saas
+    user: office_saas
+
+services:
+  - type: web
+    name: office-saas-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: chmod +x start.sh && ./start.sh
+    healthCheckPath: /api/docs/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: office-saas-db
+          property: connectionString
+      - key: DATABASE_SSL_REQUIRE
+        value: "True"
+      - key: SECURE_SSL_REDIRECT
+        value: "False"
+      # Optional override; if unset, production settings allow *.onrender.com when RENDER=true
+      - key: ALLOWED_HOSTS
+        sync: false
+      # For Swagger-only demos on free tier; tighten later
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "True"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
