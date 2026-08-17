@@ -1,8 +1,8 @@
 # Render Blueprint — native Python web service + Postgres (no Docker)
 # Docs: https://render.com/docs/blueprint-spec
 #
-# After first deploy: set ALLOWED_HOSTS (and optional custom domains) in the dashboard,
-# then create a platform admin + tenants (see docs/RENDER_DEPLOY.md).
+# After first deploy: log in with DJANGO_SUPERUSER_* credentials, then create tenants
+# (see docs/RENDER_DEPLOY.md). Free tier has no Shell — superuser is bootstrapped in start.sh.
 
 databases:
   - name: office-saas-db
@@ -46,3 +46,12 @@ services:
         sync: false
       - key: CSRF_TRUSTED_ORIGINS
         sync: false
+      # Platform SUPER_ADMIN bootstrap (no Shell on free tier). Demo defaults — change after first login.
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: admin@gmail.com
+      - key: DJANGO_SUPERUSER_PASSWORD
+        value: admin
+      - key: DJANGO_SUPERUSER_FIRST_NAME
+        value: Admin
+      - key: DJANGO_SUPERUSER_LAST_NAME
+        value: Admin

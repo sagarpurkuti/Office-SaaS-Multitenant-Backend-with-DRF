@@ -148,26 +148,26 @@ Web service → **Settings** → **Custom Domains**:
 
 ## 5. Post-deploy bootstrap (platform + two tenants)
 
-Use Render **Shell** on the web service.
+### 5.1 Platform superuser (automatic on free tier)
 
-### 5.1 Platform superuser
+`start.sh` runs `python manage.py ensure_platform_superuser` after migrations.
 
-```bash
-python manage.py shell
-```
+Set these env vars on the web service (Blueprint defaults included in `render.yaml` for demos):
 
-```python
-from apps.accounts.models import User
+| Key | Demo default |
+|-----|----------------|
+| `DJANGO_SUPERUSER_EMAIL` | `admin@gmail.com` |
+| `DJANGO_SUPERUSER_PASSWORD` | `admin` |
+| `DJANGO_SUPERUSER_FIRST_NAME` | `Admin` |
+| `DJANGO_SUPERUSER_LAST_NAME` | `Admin` |
 
-User.objects.create_superuser(
-    email='admin@example.com',
-    password='CHANGE_ME',
-    first_name='Platform',
-    last_name='Admin',
-)
-```
+On first boot the platform `SUPER_ADMIN` is created if missing; later deploys skip creation. **Change the password after first login** — demo credentials are not for real data.
+
+Login: `POST https://<service>.onrender.com/api/auth/login/` with that email/password.
 
 ### 5.2 Create a plan (required for API provisioning)
+
+Use Render Shell if available, or call the platform API after logging in as the bootstrap admin. Shell example:
 
 ```python
 from apps.saas_manager.models import TenantPlan
@@ -185,7 +185,7 @@ TenantPlan.objects.create(
 )
 ```
 
-### 5.3 Create two tenants (shell — recommended for first demo)
+### 5.3 Create two tenants (shell — or platform API after admin login)
 
 ```python
 from apps.tenants.models import Client, Domain
@@ -280,7 +280,8 @@ Cold start: first request after ~15 minutes idle may take 30–60 seconds.
 - [ ] Repo pushed (includes migrations + `render.yaml`)
 - [ ] Blueprint or manual web + Postgres created
 - [ ] Service healthy (`/api/docs/` opens)
-- [ ] Platform admin created
+- [ ] Platform admin exists (auto via `ensure_platform_superuser` / env vars)
+- [ ] Login works: `admin@gmail.com` / demo password from env
 - [ ] 1–2 tenants + Domain hostnames created
 - [ ] Custom domains (if testing two tenants)
 - [ ] Swagger login works on public and tenant hosts

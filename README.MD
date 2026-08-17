@@ -12,6 +12,8 @@ Multi-tenant HR / cooperative **API** built with Django, DRF, JWT, and **django-
 
 **Deploy:** push to GitHub → Render **Blueprint** (or manual web service with Root Directory `backend`, build `./build.sh`, start `./start.sh`).
 
+Platform admin is created automatically on start when `DJANGO_SUPERUSER_EMAIL` / `DJANGO_SUPERUSER_PASSWORD` are set (see `render.yaml` demo defaults: `admin@gmail.com` / `admin`).
+
 ## Local quick start (migrations & tenants)
 
 ```bash
