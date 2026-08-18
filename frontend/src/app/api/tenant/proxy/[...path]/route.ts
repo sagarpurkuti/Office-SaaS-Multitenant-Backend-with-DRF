@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, parseJsonBody, type ApiErrorBody } from "@/shared/api/errors";
+import { parseJsonBody, type ApiErrorBody } from "@/shared/api/errors";
 import { djangoApiBase } from "@/shared/config/env";
 import { isValidTenantHost } from "@/modules/tenant/lib/host";
 import {

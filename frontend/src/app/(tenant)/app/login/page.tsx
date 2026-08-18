@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTenantAuth } from "@/modules/tenant/auth/tenant-auth-provider";
 import { TENANT_ROUTES } from "@/modules/tenant/config";
-import { platformOrigin } from "@/shared/config/hosts";
+// import { platformOrigin } from "@/shared/config/hosts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label } from "@/components/ui/input";
