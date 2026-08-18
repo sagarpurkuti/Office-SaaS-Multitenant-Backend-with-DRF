@@ -19,5 +19,6 @@ Defines **who** a tenant is and **which hostname** maps to it (`django-tenants`)
 
 - Prefer provisioning via `saas_manager` (`POST /api/platform/tenants/`) rather than creating `Client` alone in production flows.
 - Local example domain: `demo.localhost`.
+- Next.js BFF sends `X-Tenant-Host`; `TenantHostHeaderMiddleware` copies it to `HTTP_HOST` before django-tenants routing.
 
 See [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) for host routing.

@@ -1,50 +1,34 @@
-# SaaS Manager (Next.js)
+# SaaS Manager + Tenant workspace (Next.js)
 
-Platform operator console for **Office SaaS / Saas HRM**. Talks to the Django **public** API only (`/api/auth/*`, `/api/platform/*`).
+Hostname chooses the portal. Users never type a tenant URL.
 
-Tenant HR UI is out of scope for this app (next sprint).
+| Portal | Local URL |
+|--------|-----------|
+| SaaS Manager | http://localhost:3000/login |
+| Tenant A | http://demo.localhost:3000/login |
+| Tenant B | http://demo2.localhost:3000/login |
 
-## Stack
-
-- Next.js 15 (App Router) + TypeScript
-- Tailwind CSS 4
-- TanStack Query
-- JWT stored in `localStorage` (demo-friendly; tighten for production)
+Django stays on port **8000**. Next.js (this UI) is port **3000**.  
+`Domain.domain` must match the hostname without a port: `demo.localhost`.
 
 ## Setup
 
 ```bash
 cd frontend
 cp .env.local.example .env.local
-# set NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-Backend must be running on the API URL. CORS is open in local Django settings.
-
-## Login
-
-Use a platform `SUPER_ADMIN` account (e.g. bootstrap `admin@gmail.com` / `admin` on Render).
-
-## Pages
-
-| Route | Purpose |
-|-------|---------|
-| `/login` | Platform login |
-| `/` | Dashboard metrics + recent audit |
-| `/tenants` | List tenants |
-| `/tenants/new` | Provision tenant |
-| `/tenants/[id]` | Detail, suspend / activate / reset password |
-| `/plans` | List + create plans |
-| `/subscriptions` | Subscription list |
-| `/audit` | Audit events |
-| `/announcements` | List + create announcements |
+On Windows, `*.localhost` usually resolves to `127.0.0.1` already.
 
 ## Env
 
-| Variable | Example |
+| Variable | Purpose |
 |----------|---------|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` or `https://office-saas-api.onrender.com` |
+| `NEXT_PUBLIC_API_BASE_URL` | Django origin for SaaS Manager |
+| `DJANGO_API_BASE_URL` | Django origin for the tenant BFF |
+| `NEXT_PUBLIC_PLATFORM_ORIGIN` | Link back to SaaS Manager |
+| `NEXT_PUBLIC_PLATFORM_HOSTS` | Hostnames treated as platform (not tenants) |
+
+Docs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/TENANT.md](docs/TENANT.md)

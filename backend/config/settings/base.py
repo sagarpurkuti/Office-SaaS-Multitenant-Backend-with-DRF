@@ -58,6 +58,7 @@ INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in S
 
 # Middleware – TenantMainMiddleware must be near the top
 MIDDLEWARE = [
+    'apps.tenants.middleware.TenantHostHeaderMiddleware',
     'django_tenants.middleware.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

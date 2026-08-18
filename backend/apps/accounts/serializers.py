@@ -7,8 +7,19 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'created_at', 'updated_at')
+        fields = (
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'phone',
+            'role',
+            'is_active',
+            'tenant',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = ('id', 'tenant', 'created_at', 'updated_at')
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()

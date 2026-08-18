@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     OrganizationViewSet, BranchViewSet, DepartmentViewSet,
     DesignationViewSet, FiscalYearViewSet, HolidayViewSet,
-    CompanySettingViewSet
+    CompanySettingViewSet, WorkspaceDashboardView,
 )
 
 router = DefaultRouter()
@@ -16,5 +16,6 @@ router.register(r'holidays', HolidayViewSet, basename='holiday')
 router.register(r'settings', CompanySettingViewSet, basename='companysetting')
 
 urlpatterns = [
+    path('workspace/', WorkspaceDashboardView.as_view(), name='workspace-dashboard'),
     path('', include(router.urls)),
 ]

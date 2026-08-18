@@ -14,7 +14,10 @@ Multi-tenant HR / cooperative platform: **Django + DRF API** (django-tenants) an
 
 **App READMEs:** `backend/apps/*/README.md` and `backend/config/README.md` — short per-component notes for contributors.
 
-### Frontend (SaaS Manager)
+### Frontend
+
+SaaS Manager: http://localhost:3000/login  
+Tenant workspace: http://demo.localhost:3000/login  (another tenant: http://demo2.localhost:3000/login)  
 
 ```bash
 cd frontend
@@ -23,7 +26,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 — requires backend at `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`).
+See [frontend/README.md](frontend/README.md) and [frontend/docs/TENANT.md](frontend/docs/TENANT.md).
 
 **Deploy:** push to GitHub → Render **Blueprint** (or manual web service with Root Directory `backend`, build `./build.sh`, start `./start.sh`).
 

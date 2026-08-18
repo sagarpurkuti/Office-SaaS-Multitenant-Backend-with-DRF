@@ -2,22 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth-provider";
+import { useTenantAuth } from "@/modules/tenant/auth/tenant-auth-provider";
+import { TENANT_ROUTES } from "@/modules/tenant/config";
+import { platformOrigin } from "@/shared/config/hosts";
 import { Button } from "@/components/ui/button";
-import { FieldError, Input, Label } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { ApiError } from "@/lib/api";
+import { FieldError, Input, Label } from "@/components/ui/input";
+import { ApiError } from "@/shared/api/errors";
 
-export default function LoginPage() {
-  const { user, loading, login } = useAuth();
+export default function TenantLoginPage() {
+  const { user, loading, login, tenantHost } = useTenantAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState("admin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hostLabel, setHostLabel] = useState("");
 
   useEffect(() => {
-    if (!loading && user) router.replace("/");
+    setHostLabel(window.location.host);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && user) router.replace(TENANT_ROUTES.home);
   }, [loading, user, router]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -34,16 +41,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <Card className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">
+        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
           Saas HRM
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-          SaaS Manager
+          Tenant workspace
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Sign in with a platform SUPER_ADMIN account.
+          Signing into{" "}
+          <span className="font-mono text-slate-700">{hostLabel || tenantHost || "this subdomain"}</span>
+          . Use a user that belongs to this tenant.
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -74,16 +83,13 @@ export default function LoginPage() {
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-
+{/* 
         <p className="mt-4 text-center text-xs text-slate-500">
-          Tenant user? Open{" "}
-          <a
-            href="http://demo.localhost:3000/login"
-            className="text-teal-700 hover:underline"
-          >
-            demo.localhost:3000/login
+          Platform operator?{" "}
+          <a href={`${platformOrigin()}/login`} className="text-indigo-700 hover:underline">
+            SaaS Manager login
           </a>
-        </p>
+        </p> */}
       </Card>
     </div>
   );

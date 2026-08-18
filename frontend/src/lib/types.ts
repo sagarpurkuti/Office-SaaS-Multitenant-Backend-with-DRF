@@ -14,6 +14,7 @@ export type User = {
   phone: string | null;
   role: UserRole;
   is_active: boolean;
+  tenant: number | null;
   created_at: string;
   updated_at: string;
 };

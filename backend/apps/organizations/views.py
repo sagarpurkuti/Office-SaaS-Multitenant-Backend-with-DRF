@@ -1,5 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from .models import (
     Organization, Branch, Department, Designation,
@@ -8,7 +10,7 @@ from .models import (
 from .serializers import (
     OrganizationSerializer, BranchSerializer, DepartmentSerializer,
     DesignationSerializer, FiscalYearSerializer, HolidaySerializer,
-    CompanySettingSerializer
+    CompanySettingSerializer, WorkspaceDashboardSerializer,
 )
 from .permissions import IsOwnerOrHR, IsOwnerOrHROrManager
 from apps.accounts.permissions import IsTenantUser  # ensure user belongs to tenant
@@ -175,3 +177,43 @@ class CompanySettingViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+
+class WorkspaceDashboardView(APIView):
+    """Single-round-trip snapshot for the tenant workspace home."""
+
+    permission_classes = [IsAuthenticated, IsTenantUser]
+
+    @extend_schema(
+        tags=['Organizations'],
+        summary='Tenant workspace dashboard',
+        description=(
+            'Return organization profile, company settings, and lightweight counts '
+            'for the tenant resolved from the request host.'
+        ),
+        responses={200: WorkspaceDashboardSerializer},
+    )
+    def get(self, request):
+        from apps.employees.models import Employee
+        from apps.members.models import Member
+
+        tenant = getattr(request, 'tenant', None)
+        organization = Organization.objects.order_by('id').first()
+        settings = None
+        if organization:
+            settings = CompanySetting.objects.filter(organization=organization).first()
+
+        payload = {
+            'tenant_name': getattr(tenant, 'name', ''),
+            'schema_name': getattr(tenant, 'schema_name', ''),
+            'on_trial': getattr(tenant, 'on_trial', None),
+            'organization': OrganizationSerializer(organization).data if organization else None,
+            'settings': CompanySettingSerializer(settings).data if settings else None,
+            'counts': {
+                'employees': Employee.objects.count(),
+                'members': Member.objects.count(),
+                'branches': Branch.objects.count(),
+                'departments': Department.objects.count(),
+            },
+        }
+        return Response(payload)

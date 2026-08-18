@@ -16,6 +16,7 @@ Defaults (Nepal-oriented): timezone `Asia/Kathmandu`, currency `NPR` — also se
 
 | Prefix | Resource |
 |--------|----------|
+| `workspace/` | Tenant dashboard snapshot (org + counts) |
 | `organization/` | Company profile |
 | `branches/` | Branches |
 | `departments/` | Departments |
