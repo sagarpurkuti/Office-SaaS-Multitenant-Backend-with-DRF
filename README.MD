@@ -1,6 +1,6 @@
 # Office SaaS (Saas HRM)
 
-Multi-tenant HR / cooperative **API** built with Django, DRF, JWT, and **django-tenants** (PostgreSQL schema per tenant). No frontend in this repo — use Swagger at `/api/docs/`.
+Multi-tenant HR / cooperative platform: **Django + DRF API** (django-tenants) and a **Next.js SaaS Manager** console for platform operators. Tenant app UI comes in a later sprint.
 
 ## Documentation
 
@@ -9,9 +9,21 @@ Multi-tenant HR / cooperative **API** built with Django, DRF, JWT, and **django-
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture, tenancy, flows, API map, diagrams |
 | [docs/RENDER_DEPLOY.md](docs/RENDER_DEPLOY.md) | Render **free plan** test deploy + 1–2 tenants |
 | [backend/README.md](backend/README.md) | Backend layout + links to each app README |
+| [frontend/README.md](frontend/README.md) | **SaaS Manager** Next.js console (platform) |
 | [render.yaml](render.yaml) | Render Blueprint (Python web + Postgres, no Docker) |
 
 **App READMEs:** `backend/apps/*/README.md` and `backend/config/README.md` — short per-component notes for contributors.
+
+### Frontend (SaaS Manager)
+
+```bash
+cd frontend
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 — requires backend at `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`).
 
 **Deploy:** push to GitHub → Render **Blueprint** (or manual web service with Root Directory `backend`, build `./build.sh`, start `./start.sh`).
 
