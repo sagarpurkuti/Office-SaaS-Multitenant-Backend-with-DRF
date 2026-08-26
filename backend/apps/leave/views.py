@@ -1,7 +1,9 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTenantUser
+from apps.employees.utils import get_employee_for_user
 from .models import LeaveType, LeaveRequest, LeaveApproval
 from .serializers import LeaveTypeSerializer, LeaveRequestSerializer, LeaveApprovalSerializer
 from .services.leave_service import LeaveService
@@ -18,9 +20,11 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Automatically set employee from request user
-        employee = self.request.user.employee
+        employee = get_employee_for_user(self.request.user)
         if not employee:
-            raise ValueError("No employee profile for user.")
+            raise ValidationError(
+                {'detail': 'This user is not linked to an employee record.'}
+            )
         serializer.save(employee=employee)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsTenantUser])

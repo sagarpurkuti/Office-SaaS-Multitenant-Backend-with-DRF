@@ -43,4 +43,5 @@ class EmployeeProfile(models.Model):
 
     @property
     def full_name(self):
-        return f"{self.first_name} {self.middle_name or ''} {self.last_name}".strip()
+        parts = [self.first_name, self.middle_name, self.last_name]
+        return ' '.join(part for part in parts if part)

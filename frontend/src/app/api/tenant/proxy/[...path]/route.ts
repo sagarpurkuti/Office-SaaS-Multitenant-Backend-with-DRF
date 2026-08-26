@@ -82,6 +82,20 @@ async function proxy(
     }
   }
 
+  // Payslip PDFs and payroll exports are not JSON — stream them through
+  // untouched so the browser gets a real download.
+  const responseType = res.headers.get("content-type") ?? "";
+  if (res.ok && !responseType.includes("application/json")) {
+    const passthrough = new Headers();
+    passthrough.set("Content-Type", responseType || "application/octet-stream");
+    const disposition = res.headers.get("content-disposition");
+    if (disposition) passthrough.set("Content-Disposition", disposition);
+    return new NextResponse(res.body, {
+      status: res.status,
+      headers: passthrough,
+    });
+  }
+
   const payload = await parseJsonBody(res);
   if (!res.ok) {
     return NextResponse.json(payload as ApiErrorBody, { status: res.status });

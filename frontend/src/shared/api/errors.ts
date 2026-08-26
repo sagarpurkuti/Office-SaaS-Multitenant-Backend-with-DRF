@@ -25,6 +25,36 @@ export function messageFromBody(status: number, body: ApiErrorBody): string {
   return `Request failed (${status})`;
 }
 
+/**
+ * Flattens a DRF validation body into `field -> message`.
+ *
+ * Nested serializers are keyed with a dot, so `{"profile": {"dob": [...]}}`
+ * becomes `{"profile.dob": "..."}` and a form can look messages up directly.
+ */
+export function fieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError)) return {};
+
+  const messages: Record<string, string> = {};
+  const walk = (value: unknown, path: string[]) => {
+    if (!path.length && (value === null || typeof value !== "object")) return;
+    if (Array.isArray(value)) {
+      const text = value.filter((item) => typeof item === "string").join(" ");
+      if (text) messages[path.join(".")] = text;
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const [key, nested] of Object.entries(value)) {
+        walk(nested, [...path, key]);
+      }
+      return;
+    }
+    if (typeof value === "string") messages[path.join(".")] = value;
+  };
+
+  walk(error.body, []);
+  return messages;
+}
+
 export async function parseJsonBody(res: Response): Promise<ApiErrorBody | unknown> {
   const text = await res.text();
   if (!text) return {};

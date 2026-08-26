@@ -1,7 +1,9 @@
+from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTenantUser
+from apps.employees.utils import get_employee_for_user
 from .models import Shift, EmployeeShift, Attendance, AttendanceLog, WeekendPolicy
 from .serializers import ShiftSerializer, EmployeeShiftSerializer, AttendanceSerializer, AttendanceLogSerializer, WeekendPolicySerializer, CheckInSerializer, CheckOutSerializer
 from .services.attendance_service import AttendanceService
@@ -30,7 +32,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def check_in(self, request):
         serializer = CheckInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        employee = request.user.employee  # assuming user has employee profile
+        employee = get_employee_for_user(request.user)
         if not employee:
             return Response({'error': 'No employee profile found for this user.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -54,7 +56,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def check_out(self, request):
         serializer = CheckOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        employee = request.user.employee
+        employee = get_employee_for_user(request.user)
         if not employee:
             return Response({'error': 'No employee profile found.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -76,9 +78,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def today(self, request):
-        employee = request.user.employee
+        employee = get_employee_for_user(request.user)
         if not employee:
-            return Response({'error': 'No employee profile found.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'This user is not linked to an employee record.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         today = timezone.now().date()
         attendance = Attendance.objects.filter(employee=employee, date=today).first()
         if attendance:

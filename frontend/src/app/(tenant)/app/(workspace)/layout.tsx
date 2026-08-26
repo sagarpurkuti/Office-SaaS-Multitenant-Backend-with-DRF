@@ -1,6 +1,7 @@
 "use client";
 
 import { TenantAuthProvider } from "@/modules/tenant/auth/tenant-auth-provider";
+import { RbacProvider } from "@/modules/tenant/rbac";
 import { TenantShell } from "@/modules/tenant/ui/shell";
 
 export default function TenantWorkspaceLayout({
@@ -10,7 +11,9 @@ export default function TenantWorkspaceLayout({
 }) {
   return (
     <TenantAuthProvider>
-      <TenantShell>{children}</TenantShell>
+      <RbacProvider>
+        <TenantShell>{children}</TenantShell>
+      </RbacProvider>
     </TenantAuthProvider>
   );
 }
