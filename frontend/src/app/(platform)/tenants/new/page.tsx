@@ -26,6 +26,7 @@ export default function NewTenantPage() {
   const [credentials, setCredentials] = useState<{
     email: string;
     password: string;
+    domain?: string;
   } | null>(null);
 
   const mutation = useMutation({
@@ -43,6 +44,7 @@ export default function NewTenantPage() {
         setCredentials({
           email: tenant.support_email,
           password: tenant.support_password,
+          domain: tenant.domain?.domain || domain,
         });
       } else {
         router.push(`/tenants/${tenant.id}`);
@@ -91,6 +93,21 @@ export default function NewTenantPage() {
               <dt className="text-teal-800">Password</dt>
               <dd className="font-mono">{credentials.password}</dd>
             </div>
+            {credentials.domain ? (
+              <div>
+                <dt className="text-teal-800">Tenant login</dt>
+                <dd className="font-mono">
+                  <a
+                    className="underline"
+                    href={`http://${credentials.domain}:3000/login`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    http://{credentials.domain}:3000/login
+                  </a>
+                </dd>
+              </div>
+            ) : null}
           </dl>
           <Button
             className="mt-4"
@@ -122,9 +139,15 @@ export default function NewTenantPage() {
               <Input
                 id="schema"
                 value={schemaName}
-                onChange={(e) =>
-                  setSchemaName(e.target.value.toLowerCase().replace(/\s+/g, "_"))
-                }
+                onChange={(e) => {
+                  const next = e.target.value.toLowerCase().replace(/\s+/g, "_");
+                  setSchemaName(next);
+                  // Keep local domain in sync when still using the *.localhost pattern.
+                  if (!domain || domain.endsWith(".localhost")) {
+                    const slug = next.replace(/_/g, "-").replace(/[^a-z0-9-]/g, "");
+                    if (slug) setDomain(`${slug}.localhost`);
+                  }
+                }}
                 placeholder="demo1"
                 required
               />
@@ -138,6 +161,7 @@ export default function NewTenantPage() {
                 onChange={(e) => setDomain(e.target.value.toLowerCase())}
                 required
               />
+              <FieldError message="Hostname only (no http:// or port). Local: mytenant.localhost — open http://mytenant.localhost:3000/login" />
             </div>
             <div>
               <Label htmlFor="plan">Plan</Label>

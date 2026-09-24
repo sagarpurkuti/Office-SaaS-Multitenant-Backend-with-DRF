@@ -33,16 +33,25 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid email or password')
         if not user.is_active:
             raise serializers.ValidationError('User is inactive')
-        # Ensure user belongs to the current tenant (from request)
+        # Ensure user belongs to the current tenant (from request).
+        # When X-Tenant-Host was sent, TenantHostHeaderMiddleware already
+        # rejected unknown hosts; here we still enforce membership.
         request = self.context.get('request')
-        if request and hasattr(request, 'tenant'):
+        if request and hasattr(request, 'tenant') and request.tenant is not None:
+            from django_tenants.utils import get_public_schema_name
+
             tenant = request.tenant
+            # Tenant-workspace login must not succeed against the public schema.
+            if (
+                request.META.get('HTTP_X_TENANT_HOST')
+                and tenant.schema_name == get_public_schema_name()
+            ):
+                raise serializers.ValidationError(
+                    'Unknown tenant host. Open login on your tenant subdomain.'
+                )
             if user.tenant and user.tenant != tenant:
-                # User belongs to a different tenant; deny access
                 raise serializers.ValidationError('User does not belong to this tenant')
-            # Super admins can belong to no tenant and access any
             if not user.is_super_admin() and not user.tenant:
-                # Non-superadmins must have a tenant
                 raise serializers.ValidationError('User is not assigned to a tenant')
         data['user'] = user
         return data

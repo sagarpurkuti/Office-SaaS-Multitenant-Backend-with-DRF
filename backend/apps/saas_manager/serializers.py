@@ -129,7 +129,12 @@ class TenantCreateSerializer(serializers.Serializer):
         return value
 
     def validate_domain(self, value):
-        value = value.strip().lower()
+        from apps.tenants.host import normalize_tenant_host
+
+        try:
+            value = normalize_tenant_host(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         if Domain.objects.filter(domain=value).exists():
             raise serializers.ValidationError('Domain already exists.')
         return value

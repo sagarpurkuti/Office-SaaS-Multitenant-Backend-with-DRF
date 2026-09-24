@@ -61,6 +61,14 @@ export async function parseJsonBody(res: Response): Promise<ApiErrorBody | unkno
   try {
     return JSON.parse(text);
   } catch {
-    return { detail: text };
+    // Django debug HTML 404s used to leak into the UI when the tenant host
+    // was missing — surface a short message instead of the full page.
+    if (text.trimStart().startsWith("<!DOCTYPE") || text.trimStart().startsWith("<html")) {
+      return {
+        error: `Upstream returned HTML (${res.status}). Check the tenant Domain matches this hostname.`,
+      };
+    }
+    const clipped = text.length > 280 ? `${text.slice(0, 280)}…` : text;
+    return { detail: clipped };
   }
 }
